@@ -6,9 +6,3 @@ Markdown 文本
 * Git 的使用
   * Github 远端添加
   * Github 提交
-
-
-
-## Pitcure:
-
-![](./figure/picture.png)
