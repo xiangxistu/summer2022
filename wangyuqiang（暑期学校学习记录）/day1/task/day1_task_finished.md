@@ -16,7 +16,7 @@
 
 ---
 
-## 任务一
+## 任务一：创建一个线程，该线程中启动一个定时器。定时器回调中输出自己的信息
 
 #### 1、创建工程
 
@@ -74,9 +74,18 @@ MSH_CMD_EXPORT(thread_timer_test,dynamic thread / timer test sample);
 
 ---
 
-## 任务二
+## 任务二：静态线程/动态线程创建的函数调用关系图
 
 ![image-20220719184226607](day1_task_finished.assets/image-20220719184226607.png)
 
 ---
 
+#### 任务三：软/硬定时器调用关系图
+
+![image-20220719212438493](day1_task_finished.assets/image-20220719212438493.png)
+
+---
+
+#### 任务四：RT-Thread的启动顺序图，从上电到main函数启动。（借鉴）
+
+![image-20220719213035451](day1_task_finished.assets/image-20220719213035451.png)
