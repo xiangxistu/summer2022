@@ -14,7 +14,7 @@ void thread_static(void)
    if(timer1 != RT_NULL){
            rt_timer_start(timer1);
        }else{
-           rt_kprintf("failed！");
+           rt_kprintf(" failed！");
        }
    }
 
