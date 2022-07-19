@@ -1,0 +1,138 @@
+# 第1题
+主函数的代码如下：主要思路是创建了个thread1_static的线程，里面放的是定时器的创建函数，然后开始计时，到一定的时间后，在定时器的超时函数里面输出打印。动态线程的创建在main中进行，且动态线程执行完之后就回收了。
+```c
+#include <rtthread.h>
+#include <rtdevice.h>
+#include <board.h>
+
+/* defined the LED3 pin: PB5 */
+#define LED3_PIN GET_PIN(B, 5)
+/* 定时器的控制块 */
+static rt_timer_t timer1;
+
+ALIGN(8)
+struct rt_thread static_thread;
+rt_uint8_t static_stack[2048];
+
+/* 定时器 1 超时函数 */
+static void timeout1(void *parameter)
+{
+    rt_kprintf("periodic timer is timeout \n");
+}
+//定时器的创建
+int timer_sample(void)
+{
+    /* 创建定时器 1  周期定时器 */
+    timer1 = rt_timer_create("timer1", timeout1,
+                             RT_NULL, 100,
+                             RT_TIMER_FLAG_PERIODIC);
+
+    /* 启动定时器 1 */
+    if (timer1 != RT_NULL) rt_timer_start(timer1);
+    return 0;
+}
+
+//线程1的函数
+void thread1_static(void)
+{
+    timer_sample();//创建定时器
+}
+
+//动态线程的创建
+void thread_test(void)
+{
+    /* init thread */
+    rt_thread_t thread1 = RT_NULL;
+    /*  startup thread */
+    thread1 =rt_thread_create("thread1",
+                               thread1_static,
+                                RT_NULL,
+                                256,
+                                16,
+                                50);
+    rt_thread_startup(thread1);
+}
+
+int main(void)
+{
+    /* set LED3 pin mode to output */
+    rt_pin_mode(LED3_PIN, PIN_MODE_OUTPUT);
+    thread_test();
+    while (1)
+    {
+        rt_pin_write(LED3_PIN, PIN_HIGH);
+        rt_thread_mdelay(500);
+        rt_pin_write(LED3_PIN, PIN_LOW);
+        rt_thread_mdelay(500);
+    }
+}
+
+```
+# 第2题
+RT-Thread中的线程有静态线程和动态线程。
+rt_thread_init()用来定义静态线程，rt_thread_create()定义动态线程。
+
+使用静态定义方式时，必须先定义静态的线程控制块，并且定义好堆栈空间，然后调用rt_thread_init来完成线程的初始化工作。而只能使用rt_thread_detach函数将该线程控制块从对象管理器中脱离。
+
+```c
+rt_err_t rt_thread_init(struct rt_thread* thread,
+						const char* name,
+						void (*entry)(void* parameter), void* parameter,
+						void* stack_start, rt_uint32_t stack_size,
+						rt_uint8_t priority, rt_uint32_t tick);
+
+```
+
+使用动态定义方式rt_thread_create时，RT-Thread会动态申请线程控制块和堆栈空间。调用rt_thread_delete函数就会将这段申请的内存空间重新释放到内存堆中。
+```c
+rt_thread_t rt_thread_create(const char *name,
+                             void (*entry)(void *parameter),
+                             void       *parameter,
+                             rt_uint32_t stack_size,
+                             rt_uint8_t  priority,
+                             rt_uint32_t tick)
+
+```
+# 第3题
+
+RT-Thread 的定时器提供两类定时器机制：第一类是单次触发定时器，这类定时器在启动后只会触发一次定时器事件，然后定时器自动停止。第二类是周期触发定时器，这类定时器会周期性的触发定时器事件，直到用户手动的停止，否则将永远持续执行下去。
+另外，根据超时函数执行时所处的上下文环境，RT-Thread 的定时器可以分为 HARD_TIMER 模式与 SOFT_TIMER 模式，如下图。
+![]([图片路径](https://www.rt-thread.org/document/site/rt-thread-version/rt-thread-standard/programming-manual/timer/figures/05timer_env.png))
+
+**定时器控制块**
+```c
+struct rt_timer
+{
+    struct rt_object parent;
+    rt_list_t row[RT_TIMER_SKIP_LIST_LEVEL];  /* 定时器链表节点 */
+
+    void (*timeout_func)(void *parameter);    /* 定时器超时调用的函数 */
+    void      *parameter;                         /* 超时函数的参数 */
+    rt_tick_t init_tick;                         /* 定时器初始超时节拍数 */
+    rt_tick_t timeout_tick;                     /* 定时器实际超时时的节拍数 */
+};
+typedef struct rt_timer *rt_timer_t;
+```
+定时器控制块由 struct rt_timer 结构体定义并形成定时器内核对象，再链接到内核对象容器中进行管理，list 成员则用于把一个激活的（已经启动的）定时器链接到 rt_timer_list 链表中。
+![]([图片路径](https://www.rt-thread.org/document/site/rt-thread-version/rt-thread-standard/programming-manual/timer/figures/05timer_ops.png))
+**创建定时器**
+
+```c
+rt_timer_t rt_timer_create(const char* name,
+                           void (*timeout)(void* parameter),
+                           void* parameter,
+                           rt_tick_t time,
+                           rt_uint8_t flag);
+
+#define RT_TIMER_FLAG_ONE_SHOT      0x0     /* 单次定时     */
+#define RT_TIMER_FLAG_PERIODIC      0x2     /* 周期定时     */
+
+#define RT_TIMER_FLAG_HARD_TIMER    0x0     /* 硬件定时器   */
+#define RT_TIMER_FLAG_SOFT_TIMER    0x4     /* 软件定时器   */
+```
+
+# 第4题
+![]([图片路径](https://www.rt-thread.org/document/site/rt-thread-version/rt-thread-standard/programming-manual/basic/figures/rtt_startup.png))
+
+# 第5题
+经过一天的学习，知道和了解线程的基础知识和概念，线程的创建和调用，不过感觉还是非常的难的有时候，感觉还是基础不扎实的原因，自己同样也会看文档来学习进行查漏补缺，希望接下来的每一天都能够学到有用的知识。
