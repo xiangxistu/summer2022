@@ -1,0 +1,4 @@
+1.RT-thread studio 环境搭建
+2.git的使用
+	(1)远端添加
+	(2)github提交
