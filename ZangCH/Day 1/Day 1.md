@@ -46,3 +46,9 @@
 
 <img src="Day 1.assets/image-20220720083057413.png" alt="image-20220720083057413" style="zoom:67%;" />
 
+<img src="Day 1.assets/image-20220720083133166.png" alt="image-20220720083133166" style="zoom:67%;" />
+
+<img src="Day 1.assets/image-20220720083203639.png" alt="image-20220720083203639" style="zoom:67%;" />
+
+<img src="Day 1.assets/image-20220720083427439.png" alt="image-20220720083427439" style="zoom:67%;" />
+
