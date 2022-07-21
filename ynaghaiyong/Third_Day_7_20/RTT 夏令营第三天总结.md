@@ -1,5 +1,7 @@
 # RTT 夏令营第三天总结
 
+[TOC]
+
 ## RT-Thread IPC 基本概念
 
 IPC 是保证多线程之间协助关系和数据传递的一种机制。当系统里有多个任务运行时，经常需要互相无冲突地访问同一个共享资源，比如一些全局变量之类，这时操作系统必须具有对任务运行进行协调的能力，也就是 IPC 机制。
@@ -435,6 +437,8 @@ RT-Thread 支持的基础 IPC 有：信号量（sem）、互斥锁（mutex）、
 
 ## 内存
 
+在计算系统中，通常存储空间可以分为两种：内部存储空间和外部存储空间。内部存储空间通常访问速度比较快，能够按照变量地址随机地访问，也就是我们通常所说的 RAM（随机存储器），可以把它理解为电脑的内存；而外部存储空间内所保存的内容相对来说比较固定，即使掉电后数据也不会丢失，这就是通常所讲的 ROM（只读存储器），可以把它理解为电脑的硬盘。
+
 内存是与 CPU 直接交换数据的内部存储器。可随时读写，且速度很快，作为操作系统或其他正在运行中的程序的临时数据存储介质。
 
 内存用来加载各式各样的程序与数据，以供 CPU 直接运行与运用。由于 DRAM 的性价比高且扩展性好，是现今一般计算机主存的最主要部分。
@@ -517,30 +521,521 @@ RT-Thread操作系统在内存管理上，根据上层应用及系统资源的�
 * 分配和释放的速度比动态内存接口快。
 * 静态内存池的释放并不会真正的释放内存。只是在数据的机制上提供的类似malloc的接口，方便开发。
 
-### 相关 API（待续......）
+### 相关 API
 
-* rt_malloc
-* rt_free
-* rt_mp_malloc
-* rt_mp_free 
+* 分配和释放内存块
 
-### 内存泄漏与内存碎片（待续......）
+  ```c
+  /* 分配内存块 */
+  void *rt_malloc(rt_size_t nbytes);			//需要分配的内存块的大小，单位为字节
+  ```
 
-## 作业（待续......）
+  该函数接口可从内存堆上分配用户指定大小的内存块。**rt_malloc** 函数会从系统堆空间中找到合适大小的内存块，然后把内存块可用地址返回给用户。值得注意的是，对 rt_malloc 的返回值进行判空是非常有必要的。应用程序使用完从内存分配器中申请的内存后，必须及时释放，否则会造成内存泄漏。
+
+  ```c
+  /* 释放内存块 */
+  void rt_free (void *ptr);					//待释放的内存块指针
+  ```
+
+  **rt_free** 函数会把待释放的内存还回给堆管理器中。在调用这个函数时用户需传递待释放的内存块指针，如果是空指针直接返回。注意：**rt_free** 的参数必须是以下其一：**NULL** 或是一个先前从 **rt_malloc**、 **rt_calloc** 或 **rt_realloc** 返回的值。
+
+* 重分配内存块
+
+  ```c
+  /* 重分配内存块 */
+  void *rt_realloc(void *rmem, 				//指向已分配的内存块
+                   rt_size_t newsize);		//重新分配的内存大小
+  ```
+
+  可通过该接口在已分配内存块的基础上**重新分配**内存块的大小（增加或缩小）。在进行重新分配内存块时，原来的内存块数据保持不变（缩小的情况下，后面的数据被**自动截断**）。
+
+  如果它用于扩大一个内存块，那么这块内存**原先的内容依然保留**，新增加的内存添加到原先内存块的后面，新内存并未以任何方式进行初始化。如果它用于缩小一个内存块，该内存尾部的部分内存便被拿掉，剩余部分内存的**原先内容依然保留**。
+
+  如果原先的内存块无法改变大小，rt_realloc 将**分配另一块正确大小的内存**，并把原先那块内存的内容**复制到新的块上**。所以在使用 rt_realloc 之后，你就不能再使用指向旧内存块的指针，而是应该**改用 rt_realloc 所返回的新指针**。
+
+* 创建和删除内存池
+
+  ```c
+  /* 创建内存池 */
+  rt_mp_t rt_mp_create(const char* name,			//内存池名
+                       rt_size_t block_count,		//内存块数量
+                       rt_size_t block_size);		//内存块容量
+  ```
+
+  创建内存池操作将会创建一个内存池对象并从堆上分配一个内存池。创建内存池是从对应内存池中分配和释放内存块的先决条件，创建内存池后，线程便可以从内存池中执行申请、释放等操作。
+
+  使用该函数接口可以创建一个与需求的内存块大小、数目相匹配的内存池，前提当然是在系统资源允许的情况下（最主要的是**内存堆内存资源**）才能创建成功。创建内存池时，需要给内存池指定一个名称。然后内核从系统中申请一个内存池对象，然后从内存堆中分配一块由块数目和块大小计算得来的内存缓冲区，接着初始化内存池对象，并将申请成功的内存缓冲区组织成可用于分配的空闲块链表。
+
+  ```c
+  /* 删除内存池 */
+  rt_err_t rt_mp_delete(rt_mp_t mp);				//rt_mp_create 返回的内存池对象句柄
+  ```
+
+  删除内存池将删除内存池对象并释放申请的内存。删除内存池时，会首先唤醒等待在该内存池对象上的所有线程（返回                        **-RT_ERROR**），然后再**释放已从内存堆上分配的内存池数据存放区域**，然后删除内存池对象。
+
+* 初始化和脱离内存池
+
+  ```c
+  /* 初始化内存池 */
+  rt_err_t rt_mp_init(rt_mp_t mp,					//内存池对象
+                      const char* name,			//内存池名
+                      void *start, 				//内存池的起始位置
+                      rt_size_t size,				//内存池数据区域大小
+                      rt_size_t block_size);		//内存块容量
+  ```
+
+  初始化内存池跟创建内存池类似，只是初始化内存池用于**静态内存管理模式**，内存池控制块来源于用户在系统中申请的静态对象。另外与创建内存池不同的是，此处内存池对象所使用的内存空间是**由用户指定的一个缓冲区空间**，用户把缓冲区的指针传递给内存池控制块，其余的初始化工作与创建内存池相同。
+
+  初始化内存池时，把需要进行初始化的内存池对象传递给内核，同时需要传递的还有内存池用到的内存空间，以及内存池管理的内存块数目和块大小，并且给内存池指定一个名称。这样，内核就可以对该内存池进行初始化，将内存池用到的内存空间组织成可用于分配的空闲块链表。
+
+  注：内存池块个数 = size / (block_size + 4 链表指针大小)，计算结果取整数。
+
+  ```c
+  /* 脱离内存池 */
+  rt_err_t rt_mp_detach(rt_mp_t mp);				//内存池对象
+  ```
+
+  脱离内存池将把内存池对象从内核对象管理器中脱离。使用该函数接口后，内核先唤醒所有等待在该内存池对象上的线程，然后将内存池对象从内核对象管理器中脱离。
+
+* 从内存池分配和释放内存块
+
+  ```c
+  /* 从内存池分配内存块 */
+  void *rt_mp_alloc (rt_mp_t mp,					//内存池对象
+                     rt_int32_t time);			//超时时间
+  ```
+
+  使用该接口可从指定的内存池中分配一个内存块。其中 **time** 参数的含义是申请分配内存块的超时时间。如果内存池中有可用的内存块，则从内存池的空闲块链表上取下一个内存块，减少空闲块数目**并返回这个内存块**；如果内存池中已经没有空闲内存块，则判断超时时间设置：若超时时间设置为零，则立刻**返回空内存块**；若等待时间大于零，则把当前线程**挂起在该内存池对象**上，直到内存池中有可用的自由内存块，或等待时间到达。
+
+  ```c
+  /* 释放内存块 */
+  void rt_mp_free (void *block);					//内存块指针
+  ```
+
+  任何内存块使用完后都必须被释放，否则会造成内存泄露。使用该函数接口时，首先通过需要被释放的内存块指针**计算出该内存块所在的（或所属于的）内存池对象**，然后增加内存池对象的可用内存块数目，并把该被释放的内存块**加入空闲内存块链表**上。接着判断该内存池对象上是否有挂起的线程，如果有，则**唤醒挂起线程链表上的首线程**。
+
+### 内存泄漏与内存碎片
+
+1. 随着内存不断被分配和释放，整个内存区域会产生越来越多的碎片（因为在使用过程中，申请了一些内存，其中一些释放了，导致内存空间中存在一些小的内存块，它们地址不连续，不能够作为一整块的大内存分配出去），系统中还有足够的空闲内存，但因为它们**地址并非连续**，不能组成一块连续的完整内存块，会使得程序**不能申请到大的内存**。这就叫**内存碎片**。
+
+2. 内存泄露问题是 c 语言很容易出现的问题，小程序可以很容易的发现，但是大程序就比较难发现了。内存泄露是由于**动态分配的内存没有被释放**。
+
+3. 日常项目中碰到的内存泄露大部分是**堆内存泄漏( Heap leak )**。
+
+   堆内存指的是程序运行中根据需要分配通过 malloc,realloc new 等从堆中分配的一块内存，再是完成后必须通过调用对应的 free 或者 delete 删掉。如果程序的设计的错误导致这部分内存没有被释放，那么此后这块内存将不会被使用，就会产生 Heap Leak 。 这是最常见的内存泄露。
+
+   
+
+## 作业
 
 1. **总结 IPC 能够唤醒，挂起线程的原因**
+
+   从源码中翻阅 IPC 相关代码后，可找到 IPC 对象的基础结构：
+
+   ```c
+   /**
+    * Base structure of IPC object
+    */
+   struct rt_ipc_object
+   {
+       struct rt_object parent;                            /**< inherit from rt_object */
+   
+       rt_list_t        suspend_thread;                    /**< threads pended on this resource */
+   };
+   ```
+
+   从 rt_ipc_object 的定义结构可知其派生自rt_object结构，即内核对象的定义，而其它IPC，如信号量、互斥锁，事件，邮箱，消息队列都是从rt_ipc_object派生。
+
+   源码如下：
+
+   ```c
+   /**
+    * Semaphore structure
+    */
+   struct rt_semaphore
+   {
+       struct rt_ipc_object parent;                        /**< inherit from ipc_object */
+   
+       rt_uint16_t          value;                         /**< value of semaphore. */
+       rt_uint16_t          reserved;                      /**< reserved field */
+   };
+   /**
+    * Mutual exclusion (mutex) structure
+    */
+   struct rt_mutex
+   {
+       struct rt_ipc_object parent;                        /**< inherit from ipc_object */
+   
+       rt_uint16_t          value;                         /**< value of mutex */
+   
+       rt_uint8_t           original_priority;             /**< priority of last thread hold the mutex */
+       rt_uint8_t           hold;                          /**< numbers of thread hold the mutex */
+   
+       struct rt_thread    *owner;                         /**< current owner of mutex */
+   };
+   ```
+
+   由此可知，这些 IPC 都派生自 rt_ipc_object ，且具有线程挂起链表,用来保存因此 IPC 对象而挂起的线程。
+
+   以下用信号量的源码做分析：
+
+   ```c
+   rt_err_t rt_sem_init(rt_sem_t    sem,
+                        const char *name,
+                        rt_uint32_t value,
+                        rt_uint8_t  flag)
+   {
+       RT_ASSERT(sem != RT_NULL);
+       RT_ASSERT(value < 0x10000U);
+   
+       /* initialize object */
+       rt_object_init(&(sem->parent.parent), RT_Object_Class_Semaphore, name);//初始化信号量的内核对象
+   
+       /* initialize ipc object */
+       rt_ipc_object_init(&(sem->parent));//初始化信号量的IPC对象
+   
+       /* set initial value */
+       sem->value = (rt_uint16_t)value;//设置信号量计数器的值 
+   
+       /* set parent */
+       sem->parent.parent.flag = flag;//设置信号量的内核对象的标志
+   
+       return RT_EOK;
+   }
+   ```
+
+   跳入 ”初始化信号量的 IPC 对象“ 这一步，也就是 rt_ipc_object_init 这个接口函数，如下：
+
+   ```c
+   rt_inline rt_err_t rt_ipc_object_init(struct rt_ipc_object *ipc)
+   {
+       /* initialize ipc object */
+       rt_list_init(&(ipc->suspend_thread));//初始化线程挂起链表  
+   
+       return RT_EOK;
+   }
+   ```
+
+   在这一步进行了线程挂起链表的初始化。
+
+   已知信号量被删除或脱离时会将挂起链表中的所有线程都唤醒。所以跳入 rt_sem_detach 函数接口查看源码：
+
+   ```c
+   rt_err_t rt_sem_detach(rt_sem_t sem)
+   {
+       /* parameter check */
+       RT_ASSERT(sem != RT_NULL);
+       RT_ASSERT(rt_object_get_type(&sem->parent.parent) == RT_Object_Class_Semaphore);
+       RT_ASSERT(rt_object_is_systemobject(&sem->parent.parent));
+   
+       /* wakeup all suspended threads */
+       rt_ipc_list_resume_all(&(sem->parent.suspend_thread));//唤醒所有信号量内挂起的线程
+   
+       /* detach semaphore object */
+       rt_object_detach(&(sem->parent.parent));//脱离信号量的内核对象
+   
+       return RT_EOK;
+   }
+   ```
+
+   跳入 rt_ipc_list_resume_all ：
+
+   ```c
+   /**
+    * @brief   This function will resume all suspended threads in the IPC object list,
+    *          including the suspended list of IPC object, and private list of mailbox etc.
+    *
+    * @note    This function will resume all threads in the IPC object list.
+    *          By contrast, the rt_ipc_list_resume() function will resume a suspended thread in the list of a IPC object.
+    *
+    * @param   list is a pointer to a suspended thread list of the IPC object.
+    *
+    * @return   Return the operation status. When the return value is RT_EOK, the function is successfully executed.
+    *           When the return value is any other values, it means this operation failed.
+    *
+    */
+   rt_inline rt_err_t rt_ipc_list_resume_all(rt_list_t *list)
+   {
+       struct rt_thread *thread;
+       register rt_ubase_t temp;
+   
+       /* wakeup all suspended threads */
+       while (!rt_list_isempty(list))//遍历线程挂起链表
+       {
+           /* disable interrupt */
+           temp = rt_hw_interrupt_disable();
+   
+           /* get next suspended thread */
+           thread = rt_list_entry(list->next, struct rt_thread, tlist);//获得线程
+           /* set error code to RT_ERROR */
+           thread->error = -RT_ERROR;//设置线程的错误码为-RT_ERROR
+   
+           /*
+            * resume thread
+            * In rt_thread_resume function, it will remove current thread from
+            * suspended list
+            */
+           rt_thread_resume(thread);//唤醒此线程
+   
+           /* enable interrupt */
+           rt_hw_interrupt_enable(temp);
+       }
+   
+       return RT_EOK;
+   }
+   ```
+
+   可知，在信号量脱离或删除时，会遍历这个信号量属性中的线程链表，将其中的线程全部唤醒并设置错误码为 -RT_ERROR 。由此可类推其他 IPC 被删除时的线程唤醒操作流程。
+
+   再跳入 rt_sem_take 信号量获取接口查看源码：
+
+   ```c
+   rt_err_t rt_sem_take(rt_sem_t sem, rt_int32_t time)
+   {
+       register rt_base_t temp;
+       struct rt_thread *thread;
+   
+       /* parameter check */
+       RT_ASSERT(sem != RT_NULL);
+       RT_ASSERT(rt_object_get_type(&sem->parent.parent) == RT_Object_Class_Semaphore);
+   
+       RT_OBJECT_HOOK_CALL(rt_object_trytake_hook, (&(sem->parent.parent)));
+   
+       /* disable interrupt */
+       temp = rt_hw_interrupt_disable();
+   
+       RT_DEBUG_LOG(RT_DEBUG_IPC, ("thread %s take sem:%s, which value is: %d\n",
+                                   rt_thread_self()->name,
+                                   ((struct rt_object *)sem)->name,
+                                   sem->value));
+   
+       if (sem->value > 0)
+       {
+           /* semaphore is available */
+           sem->value --;
+   
+           /* enable interrupt */
+           rt_hw_interrupt_enable(temp);
+       }
+       else
+       {
+           /* no waiting, return with timeout */
+           if (time == 0)
+           {
+               rt_hw_interrupt_enable(temp);
+   
+               return -RT_ETIMEOUT;
+           }
+           else
+           {
+               /* current context checking */
+               RT_DEBUG_IN_THREAD_CONTEXT;
+   
+               /* semaphore is unavailable, push to suspend list */
+               /* get current thread */
+               thread = rt_thread_self();//获取当前正在运行的线程  
+   
+               /* reset thread error number */
+               thread->error = RT_EOK;//设置当前线程的错误代码为RT_EOK
+   
+               RT_DEBUG_LOG(RT_DEBUG_IPC, ("sem take: suspend thread - %s\n",
+                                           thread->name));
+   
+               /* suspend thread */
+               rt_ipc_list_suspend(&(sem->parent.suspend_thread),//挂起当前线程到信号量中的断起线程链表
+                                   thread,
+                                   sem->parent.parent.flag);
+   
+               /* has waiting time, start thread timer */
+               if (time > 0)
+               {
+                   RT_DEBUG_LOG(RT_DEBUG_IPC, ("set thread:%s to timer list\n",
+                                               thread->name));
+   
+                   /* reset the timeout of thread timer and start it */
+                   rt_timer_control(&(thread->thread_timer),
+                                    RT_TIMER_CTRL_SET_TIME,
+                                    &time);
+                   rt_timer_start(&(thread->thread_timer));
+               }
+   
+               /* enable interrupt */
+               rt_hw_interrupt_enable(temp);
+   
+               /* do schedule */
+               rt_schedule();//调用线程调度器
+   
+               if (thread->error != RT_EOK)
+               {
+                   return thread->error;
+               }
+           }
+       }
+   
+       RT_OBJECT_HOOK_CALL(rt_object_take_hook, (&(sem->parent.parent)));
+   
+       return RT_EOK;
+   }
+   ```
+
+   跳入 rt_ipc_list_suspend 接口函数：
+
+   ```c
+   rt_inline rt_err_t rt_ipc_list_suspend(rt_list_t        *list,
+                                          struct rt_thread *thread,
+                                          rt_uint8_t        flag)
+   {
+       /* suspend thread */
+       rt_thread_suspend(thread);//挂起线程
+   
+       switch (flag)
+       {
+       case RT_IPC_FLAG_FIFO://FIFO方式
+           rt_list_insert_before(list, &(thread->tlist));//直接放入队列末尾
+           break; /* RT_IPC_FLAG_FIFO */
+   
+       case RT_IPC_FLAG_PRIO://按线程优先级方式
+           {
+               struct rt_list_node *n;
+               struct rt_thread *sthread;
+   
+               /* find a suitable position */
+               for (n = list->next; n != list; n = n->next)//遍历信号量的挂起链表
+               {
+                   sthread = rt_list_entry(n, struct rt_thread, tlist);
+   
+                   /* find out */
+                   if (thread->current_priority < sthread->current_priority)//按优先级找到合适位置
+                   {
+                       /* insert this thread before the sthread */
+                       rt_list_insert_before(&(sthread->tlist), &(thread->tlist));//将线程加入到链表中
+                       break;
+                   }
+               }
+   
+               /*
+                * not found a suitable position,
+                * append to the end of suspend_thread list
+                */
+               if (n == list)
+                   rt_list_insert_before(list, &(thread->tlist));//没有找到合适位置，则放到末尾
+           }
+           break;/* RT_IPC_FLAG_PRIO */
+   
+       default:
+           RT_ASSERT(0);
+           break;
+       }
+   
+       return RT_EOK;
+   }
+   ```
+
+   由此可见，当信号量获取到时，会通过 rt_ipc_list_suspend 函数将线程插入到合适位置，再调用线程调度器重新调度线程。
+
+   再分析信号量释放函数：
+
+   ```c
+   rt_err_t rt_sem_release(rt_sem_t sem)
+   {
+       register rt_base_t temp;
+       register rt_bool_t need_schedule;
+   
+       /* parameter check */
+       RT_ASSERT(sem != RT_NULL);
+       RT_ASSERT(rt_object_get_type(&sem->parent.parent) == RT_Object_Class_Semaphore);
+   
+       RT_OBJECT_HOOK_CALL(rt_object_put_hook, (&(sem->parent.parent)));
+   
+       need_schedule = RT_FALSE;//默认情况下设置不需要重新调度标记
+   
+       /* disable interrupt */
+       temp = rt_hw_interrupt_disable();
+   
+       RT_DEBUG_LOG(RT_DEBUG_IPC, ("thread %s releases sem:%s, which value is: %d\n",
+                                   rt_thread_self()->name,
+                                   ((struct rt_object *)sem)->name,
+                                   sem->value));
+   
+       if (!rt_list_isempty(&sem->parent.suspend_thread))//挂起线程不为空
+       {
+           /* resume the suspended thread */
+           rt_ipc_list_resume(&(sem->parent.suspend_thread));//唤醒第一个挂起的线程 
+           need_schedule = RT_TRUE;//需要重新调度
+       }
+       else
+       {
+           if(sem->value < RT_SEM_VALUE_MAX)
+           {
+               sem->value ++; /* increase value */
+           }
+           else
+           {
+               rt_hw_interrupt_enable(temp); /* enable interrupt */
+               return -RT_EFULL; /* value overflowed */
+           }
+       }
+   
+       /* enable interrupt */
+       rt_hw_interrupt_enable(temp);
+   
+       /* resume a thread, re-schedule */
+       if (need_schedule == RT_TRUE)//如果需要重新调度线程,则重新调度
+           rt_schedule();
+   
+       return RT_EOK;
+   }
+   ```
+
+   再跳入 rt_ipc_list_resume 函数接口：
+
+   ```c
+   rt_inline rt_err_t rt_ipc_list_resume(rt_list_t *list)
+   {
+       struct rt_thread *thread;
+   
+       /* get thread entry */
+       thread = rt_list_entry(list->next, struct rt_thread, tlist);//获取线程
+   
+       RT_DEBUG_LOG(RT_DEBUG_IPC, ("resume thread:%s\n", thread->name));
+   
+       /* resume it */
+       rt_thread_resume(thread);//唤醒此线程
+   
+       return RT_EOK;
+   }
+   ```
+
+   可知释放信号量后在此处进行了挂起链表中线程的唤醒和调度。
+
+   》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》》
+
+   **总结：IPC 唤醒线程主要使用 rt_ipc_list_resume 和 rt_ipc_list_resume_all 两个接口函数。**
+
+   ​			**挂起线程主要使用 rt_ipc_list_suspend 接口函数。**
+
+   ​			**在每个 IPC 初始化或创建时，会从父类继承一个线程挂起列表，然后将该 IPC 有关的线程注册到这个链表，再使用上述几个接			口函数实现线程的挂起和唤醒。**
+
+   
+
 2. **线程切换的概念，libcpu 下的内容**
+
+   **线程切换是在中断中进行的，当线程被调度，则会进入触发一个中断进行线程的上下文保存和切换。如我使用的 RISC-V 架构的芯片就是触发 SW_handler 这个中断来进行线程切换的。**
+
+   **在嵌入式领域有很多种不同的CPU架构（例如Cortex-M / MIPS32 / RISC-V等），为了使RT-Thread能够在不同CPU架构的芯片上运行，RT-Thread提供了一个libcpu抽象层来适配不同的CPU架构，libcpu向上对内核提供统一的接口，包括全局中断开关、线程栈初始化、上下文切换等。**
+
+   
+
 3. **内存常见错误产生原因**
 
+   * 内存泄漏
 
+     内存泄露问题是 c 语言很容易出现的问题，小程序可以很容易的发现，但是大程序就比较难发现了。内存泄露是由于**动态分配的内存没有被释放**。
 
-基本要求：
-\1. 五种 IPC 的使用
-\2. rt_malloc, rt_free, rt_mp_alloc, rt_mp_free 的使用
+   * 内存碎片
 
-课后作业：
-\1. 总结 IPC 能够唤醒，挂起线程的原因
+     随着内存不断被分配和释放，整个内存区域会产生越来越多的碎片（因为在使用过程中，申请了一些内存，其中一些释放了，导致内存空间中存在一些小的内存块，它们地址不连续，不能够作为一整块的大内存分配出去），系统中还有足够的空闲内存，但因为它们**地址并非连续**，不能组成一块连续的完整内存块，会使得程序**不能申请到大的内存**。这就叫**内存碎片**。
 
-扩展：
-\1. 线程切换的概念，libcpu 下的内容
-\2. 内存常见错误产生原因
+   * 内存写穿（待补充......）
+
+     
