@@ -86,11 +86,11 @@
             *rt_thread_mdelay(1000);*
         *}*
     *}*
-
+    
     *MSH_CMD_EXPORT(led_test,led test sample);*
-
+    
     ![](./figure/2.png)
-
+    
     进一步的也可以使用rt_pin_read()结合开发板上的按键读取按键引脚的键值，控制LED的亮灭
 
   - I2C
@@ -106,6 +106,28 @@
     ![](./figure/5.png)
 
     (HPM6750板子似乎I2C接入遇到一些问题等待老师解决)
+    
+    经过老师的适配，通过将更新包中的以下文件复制到自己工程完成移植
+
+​		<img src="./figure/15.png" style="zoom: 67%;" />
+
+<img src="./figure/16.png" style="zoom:67%;" />
+
+​		移植完成后将AHT10软件包的README文件中初始化程序复制到主函数
+
+​		上机后先检查list_device设备是否加载成功
+
+![](./figure/17.png)
+
+​		通过sensor probe载入i2c设备地址，在通过sensor read读取数据
+
+![](./figure/18.png)
+
+![](./figure/19.png)
+
+​		最后还可以通过sensor info查询传感器信息
+
+![](./figure/20.png)
 
 
 
