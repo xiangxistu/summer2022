@@ -18,5 +18,5 @@ rt_thread_init    ： 静态创建 就是提前申请好一点的空间，
     3）RTT的启动流程
 
 
-![avatar](./picture/task.png)
+![](./picture/task.png)
 

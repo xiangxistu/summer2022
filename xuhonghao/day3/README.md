@@ -109,7 +109,7 @@ MSH_CMD_EXPORT(mutex_sample, mutex sample);
 
 
 
-![](.\picture\1.png)
+![](./picture/1.png)
 
 
 但是按照逻辑来说，线程2的优先级跟高，应该先被执行，却被线程1（此时相当于中间优先级）抢断，发生优先级翻转
@@ -117,7 +117,7 @@ MSH_CMD_EXPORT(mutex_sample, mutex sample);
 
 
 
-![](.\picture\2.png)
+![](./picture/2.png)
 
 
 解决了优先级翻转的问题，但是对为什么会产生优先级翻转还不是特别深入理解。
@@ -131,14 +131,14 @@ MSH_CMD_EXPORT(mutex_sample, mutex sample);
 
         
         注意：不能用于组合事件、中断中不获取信号量
-![](.\picture\3.png)
+![](./picture/3.png)
 
 
     2）互斥量也称二值信号量：
         可以控制优先级翻转问题，具有优先级继承机制，可以嵌套
 
 
-![](.\picture\4.png)
+![](./picture/4.png)
     
 
     3）邮箱：
@@ -148,12 +148,12 @@ MSH_CMD_EXPORT(mutex_sample, mutex sample);
         注意：邮箱只发送4字节数据（一个地址）、不拷贝数据、
 
 
-![](.\picture\5.png)
+![](./picture/5.png)
 
 
     4）队列：
         和邮箱不同的是，拷贝数据，一般用于有序数据。
-![](.\picture\6.png)
+![](./picture/6.png)
 
 
     5）事件：
@@ -161,7 +161,7 @@ MSH_CMD_EXPORT(mutex_sample, mutex sample);
 
 
 
-![](.\picture\7.png)
+![](./picture/7.png)
 
 
 ## 三、个人感觉ipc的调度关系都类似所以我就调一个吧

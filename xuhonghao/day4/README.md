@@ -5,7 +5,7 @@
 
 
 学习IIC驱动过程中，主要发现RT_Thread setting设置中无法更改63以上的管脚于是问过刘老师之后再如图配置文件中更改
-![](.\picture\question.png)
+![](./picture/question.png)
 更改最高时63改为最高引脚就可以在RT_Thread setting中设置了
 
 
@@ -57,4 +57,4 @@ msh >sensor read
 msh >
 ```
 
-![](.\picture\data.png)
+![](./picture/data.png)
