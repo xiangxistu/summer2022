@@ -48,50 +48,53 @@
 
     通过使用rt_pin_mode()设定LED连接的引脚为输出模式，然后再通过rt_pin_write()对引脚写1和置0的方式就可以使LED灯闪烁
 
-    *//-----------------------------led-----------------------------------*
-
-    *static rt_thread_t led_thread = RT_NULL;*
-
-    *void led_thread_entry(void *arg);*
-
-    *void led_test(void)*
-    *{*
-        *led_thread = rt_thread_create("led",*
-                                       *led_thread_entry,*
-                                       *RT_NULL,*
-                                       *2048,*
-                                       *5,*
-                                       *100);*
-        *if (led_thread != RT_NULL)*
-            *rt_thread_startup(led_thread);*
-    *}*
-
-
-    *void led_thread_entry(void *arg)*
-    *{*
-        *rt_pin_mode(IOC_PAD_PB20,PIN_MODE_OUTPUT );*
-        *rt_pin_mode(IOC_PAD_PB19,PIN_MODE_OUTPUT );*
-        *rt_pin_mode(IOC_PAD_PB18,PIN_MODE_OUTPUT );*
-        *while(1)*
-        *{*
-            *rt_pin_write(IOC_PAD_PB20, PIN_HIGH );*
-            *rt_pin_write(IOC_PAD_PB19, PIN_HIGH );*
-            *rt_pin_write(IOC_PAD_PB18, PIN_HIGH );*
-            *rt_kprintf("LED ON\n");*
-            *rt_thread_mdelay(1000);*
-            *rt_pin_write(IOC_PAD_PB20, PIN_LOW );*
-            *rt_pin_write(IOC_PAD_PB19, PIN_LOW );*
-            *rt_pin_write(IOC_PAD_PB18, PIN_LOW );*
-            *rt_kprintf("LED OFF\n");*
-            *rt_thread_mdelay(1000);*
-        *}*
-    *}*
+    ```c
+    //-----------------------------led-----------------------------------
     
-    *MSH_CMD_EXPORT(led_test,led test sample);*
+    static rt_thread_t led_thread = RT_NULL;
     
-    ![](./figure/2.png)
+    void led_thread_entry(void arg);
     
-    进一步的也可以使用rt_pin_read()结合开发板上的按键读取按键引脚的键值，控制LED的亮灭
+    void led_test(void)
+    {
+        led_thread = rt_thread_create("led",
+                                       led_thread_entry,
+                                       RT_NULL,
+                                       2048,
+                                       5,
+                                       100);
+        if (led_thread != RT_NULL)
+            rt_thread_startup(led_thread);
+    }
+    
+    void led_thread_entry(void arg)
+    {
+        rt_pin_mode(IOC_PAD_PB20,PIN_MODE_OUTPUT );
+        rt_pin_mode(IOC_PAD_PB19,PIN_MODE_OUTPUT );
+        rt_pin_mode(IOC_PAD_PB18,PIN_MODE_OUTPUT );
+        while(1)
+        {
+            rt_pin_write(IOC_PAD_PB20, PIN_HIGH );
+            rt_pin_write(IOC_PAD_PB19, PIN_HIGH );
+            rt_pin_write(IOC_PAD_PB18, PIN_HIGH );
+            rt_kprintf("LED ON\n");
+            rt_thread_mdelay(1000);
+            rt_pin_write(IOC_PAD_PB20, PIN_LOW );
+            rt_pin_write(IOC_PAD_PB19, PIN_LOW );
+            rt_pin_write(IOC_PAD_PB18, PIN_LOW );
+            rt_kprintf("LED OFF\n");
+            rt_thread_mdelay(1000);
+        }
+    }
+    
+    MSH_CMD_EXPORT(led_test,led test sample);
+    ```
+    
+    
+
+![](./figure/2.png)
+
+进一步的也可以使用rt_pin_read()结合开发板上的按键读取按键引脚的键值，控制LED的亮灭
 
   - I2C
 
