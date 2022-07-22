@@ -132,7 +132,81 @@
 
 ![](./figure/20.png)
 
+​		此外也可以调用rt_device_find()->rt_device_open->()->rt_device_read()的方式读取温湿度并打印
 
+​		
+
+```c
+#include <stdio.h>
+#include <sys/time.h>
+#include "sensor_asair_aht10.h"
+
+#define AHT10_I2C_BUS  "i2c3"
+
+#define HUMI_DEVICE_NAME    "humi_aht"
+#define TEMP_DEVICE_NAME    "temp_aht"
+
+static rt_device_t _humi_dev = RT_NULL;
+static rt_device_t _temp_dev = RT_NULL;
+static rt_thread_t aht10_thread = RT_NULL;
+
+void aht10_thread_entry(void *arg);
+
+void aht10_test(void)
+{
+    aht10_thread = rt_thread_create("ath10",
+                                   aht10_thread_entry,
+                                   RT_NULL,
+                                   2048,
+                                   5,
+                                   100);
+    if (aht10_thread != RT_NULL)
+        rt_thread_startup(aht10_thread);
+}
+
+void aht10_thread_entry(void *arg)
+{
+    struct rt_sensor_data data1;
+    struct rt_sensor_data data2;
+
+    _humi_dev = rt_device_find(HUMI_DEVICE_NAME);
+    if(_humi_dev == RT_NULL)
+        rt_kprintf("find %s device failed.\r\n", HUMI_DEVICE_NAME);
+    else
+        rt_device_open(_humi_dev, RT_DEVICE_FLAG_RDONLY);
+
+    _temp_dev = rt_device_find(TEMP_DEVICE_NAME);
+        if(_temp_dev == RT_NULL)
+            rt_kprintf("find %s device failed.\r\n", TEMP_DEVICE_NAME);
+        else
+            rt_device_open(_temp_dev, RT_DEVICE_FLAG_RDONLY);
+
+    while(1)
+    {
+        if ((_humi_dev == RT_NULL) && (_temp_dev == RT_NULL)) continue;
+        if ((rt_device_read(_temp_dev, 0, &data1, 1) == 1) & (rt_device_read(_humi_dev, 0, &data2, 1) == 1))
+        {
+            printf("temp:%3d.%d°C humi:%3d.%d%%\r\n",data1.data.temp / 10,(rt_uint32_t)data1.data.temp % 10, data2.data.temp / 10,data2.data.humi % 10);
+        }
+        rt_thread_mdelay(100);
+    }
+}
+
+MSH_CMD_EXPORT(aht10_test,aht10 test sample);
+
+int rt_hw_aht10_port(void)
+{
+    struct rt_sensor_config cfg;
+    cfg.intf.dev_name  = AHT10_I2C_BUS;
+    cfg.intf.user_data = (void *)AHT10_I2C_ADDR;
+    rt_hw_aht10_init("aht10", &cfg);
+    return RT_EOK;
+}
+
+INIT_ENV_EXPORT(rt_hw_aht10_port);
+```
+
+![](./figure/21.png)
 
 - ##### HPM6750
 
