@@ -48,50 +48,53 @@
 
     通过使用rt_pin_mode()设定LED连接的引脚为输出模式，然后再通过rt_pin_write()对引脚写1和置0的方式就可以使LED灯闪烁
 
-    *//-----------------------------led-----------------------------------*
+    ```c
+    //-----------------------------led-----------------------------------
+    
+    static rt_thread_t led_thread = RT_NULL;
+    
+    void led_thread_entry(void arg);
+    
+    void led_test(void)
+    {
+        led_thread = rt_thread_create("led",
+                                       led_thread_entry,
+                                       RT_NULL,
+                                       2048,
+                                       5,
+                                       100);
+        if (led_thread != RT_NULL)
+            rt_thread_startup(led_thread);
+    }
+    
+    void led_thread_entry(void arg)
+    {
+        rt_pin_mode(IOC_PAD_PB20,PIN_MODE_OUTPUT );
+        rt_pin_mode(IOC_PAD_PB19,PIN_MODE_OUTPUT );
+        rt_pin_mode(IOC_PAD_PB18,PIN_MODE_OUTPUT );
+        while(1)
+        {
+            rt_pin_write(IOC_PAD_PB20, PIN_HIGH );
+            rt_pin_write(IOC_PAD_PB19, PIN_HIGH );
+            rt_pin_write(IOC_PAD_PB18, PIN_HIGH );
+            rt_kprintf("LED ON\n");
+            rt_thread_mdelay(1000);
+            rt_pin_write(IOC_PAD_PB20, PIN_LOW );
+            rt_pin_write(IOC_PAD_PB19, PIN_LOW );
+            rt_pin_write(IOC_PAD_PB18, PIN_LOW );
+            rt_kprintf("LED OFF\n");
+            rt_thread_mdelay(1000);
+        }
+    }
+    
+    MSH_CMD_EXPORT(led_test,led test sample);
+    ```
+    
+    
 
-    *static rt_thread_t led_thread = RT_NULL;*
+![](./figure/2.png)
 
-    *void led_thread_entry(void *arg);*
-
-    *void led_test(void)*
-    *{*
-        *led_thread = rt_thread_create("led",*
-                                       *led_thread_entry,*
-                                       *RT_NULL,*
-                                       *2048,*
-                                       *5,*
-                                       *100);*
-        *if (led_thread != RT_NULL)*
-            *rt_thread_startup(led_thread);*
-    *}*
-
-
-    *void led_thread_entry(void *arg)*
-    *{*
-        *rt_pin_mode(IOC_PAD_PB20,PIN_MODE_OUTPUT );*
-        *rt_pin_mode(IOC_PAD_PB19,PIN_MODE_OUTPUT );*
-        *rt_pin_mode(IOC_PAD_PB18,PIN_MODE_OUTPUT );*
-        *while(1)*
-        *{*
-            *rt_pin_write(IOC_PAD_PB20, PIN_HIGH );*
-            *rt_pin_write(IOC_PAD_PB19, PIN_HIGH );*
-            *rt_pin_write(IOC_PAD_PB18, PIN_HIGH );*
-            *rt_kprintf("LED ON\n");*
-            *rt_thread_mdelay(1000);*
-            *rt_pin_write(IOC_PAD_PB20, PIN_LOW );*
-            *rt_pin_write(IOC_PAD_PB19, PIN_LOW );*
-            *rt_pin_write(IOC_PAD_PB18, PIN_LOW );*
-            *rt_kprintf("LED OFF\n");*
-            *rt_thread_mdelay(1000);*
-        *}*
-    *}*
-
-    *MSH_CMD_EXPORT(led_test,led test sample);*
-
-    ![](./figure/2.png)
-
-    进一步的也可以使用rt_pin_read()结合开发板上的按键读取按键引脚的键值，控制LED的亮灭
+进一步的也可以使用rt_pin_read()结合开发板上的按键读取按键引脚的键值，控制LED的亮灭
 
   - I2C
 
@@ -106,8 +109,104 @@
     ![](./figure/5.png)
 
     (HPM6750板子似乎I2C接入遇到一些问题等待老师解决)
+    
+    经过老师的适配，通过将更新包中的以下文件复制到自己工程完成移植
 
+​		<img src="./figure/15.png" style="zoom: 67%;" />
 
+<img src="./figure/16.png" style="zoom:67%;" />
+
+​		移植完成后将AHT10软件包的README文件中初始化程序复制到主函数
+
+​		上机后先检查list_device设备是否加载成功
+
+![](./figure/17.png)
+
+​		通过sensor probe载入i2c设备地址，在通过sensor read读取数据
+
+![](./figure/18.png)
+
+![](./figure/19.png)
+
+​		最后还可以通过sensor info查询传感器信息
+
+![](./figure/20.png)
+
+​		此外也可以调用rt_device_find()->rt_device_open->()->rt_device_read()的方式读取温湿度并打印
+
+​		
+
+```c
+#include <stdio.h>
+#include <sys/time.h>
+#include "sensor_asair_aht10.h"
+
+#define AHT10_I2C_BUS  "i2c3"
+
+#define HUMI_DEVICE_NAME    "humi_aht"
+#define TEMP_DEVICE_NAME    "temp_aht"
+
+static rt_device_t _humi_dev = RT_NULL;
+static rt_device_t _temp_dev = RT_NULL;
+static rt_thread_t aht10_thread = RT_NULL;
+
+void aht10_thread_entry(void *arg);
+
+void aht10_test(void)
+{
+    aht10_thread = rt_thread_create("ath10",
+                                   aht10_thread_entry,
+                                   RT_NULL,
+                                   2048,
+                                   5,
+                                   100);
+    if (aht10_thread != RT_NULL)
+        rt_thread_startup(aht10_thread);
+}
+
+void aht10_thread_entry(void *arg)
+{
+    struct rt_sensor_data data1;
+    struct rt_sensor_data data2;
+
+    _humi_dev = rt_device_find(HUMI_DEVICE_NAME);
+    if(_humi_dev == RT_NULL)
+        rt_kprintf("find %s device failed.\r\n", HUMI_DEVICE_NAME);
+    else
+        rt_device_open(_humi_dev, RT_DEVICE_FLAG_RDONLY);
+
+    _temp_dev = rt_device_find(TEMP_DEVICE_NAME);
+        if(_temp_dev == RT_NULL)
+            rt_kprintf("find %s device failed.\r\n", TEMP_DEVICE_NAME);
+        else
+            rt_device_open(_temp_dev, RT_DEVICE_FLAG_RDONLY);
+
+    while(1)
+    {
+        if ((_humi_dev == RT_NULL) && (_temp_dev == RT_NULL)) continue;
+        if ((rt_device_read(_temp_dev, 0, &data1, 1) == 1) & (rt_device_read(_humi_dev, 0, &data2, 1) == 1))
+        {
+            printf("temp:%3d.%d°C humi:%3d.%d%%\r\n",data1.data.temp / 10,(rt_uint32_t)data1.data.temp % 10, data2.data.temp / 10,data2.data.humi % 10);
+        }
+        rt_thread_mdelay(100);
+    }
+}
+
+MSH_CMD_EXPORT(aht10_test,aht10 test sample);
+
+int rt_hw_aht10_port(void)
+{
+    struct rt_sensor_config cfg;
+    cfg.intf.dev_name  = AHT10_I2C_BUS;
+    cfg.intf.user_data = (void *)AHT10_I2C_ADDR;
+    rt_hw_aht10_init("aht10", &cfg);
+    return RT_EOK;
+}
+
+INIT_ENV_EXPORT(rt_hw_aht10_port);
+```
+
+![](./figure/21.png)
 
 - ##### HPM6750
 
