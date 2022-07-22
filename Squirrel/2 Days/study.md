@@ -53,11 +53,11 @@
 
   - 定时器创建函数
 
-    rt_timer_t rt_timer_create(const char * name, 									//定时器名
+    rt_timer_t rt_timer_create(const char * name, 								   //定时器名
     												void (* timeout)(void *parameter),		//超时函数指针
     												void *parameter,									  //超时函数形参
     												rt_tick_t time,											 //超时时间
-    												rt_uint8_t flag)											//定时器创建参数
+    												rt_uint8_t flag)										   //定时器创建参数
 
   - 定时器创建参数
 
