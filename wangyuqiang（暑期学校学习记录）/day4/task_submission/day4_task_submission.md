@@ -193,6 +193,38 @@ time_t time(time_t *t)
 
 `注意：在目前系统中只允许存在一个RTC设备，且名称为“rtc”`
 
-#### 6、实例演示（这里使用官方例程）
+#### 6、实例演示
 
-![image-20220723092959167](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207230929619.png)
+![image-20220723211556039](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232115076.png)
+
+![image-20220723211537097](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232115149.png)
+
+![image-20220723211502557](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232115668.png)
+
+
+
+---
+
+## Task3
+
+#### 切换rt_kprintf的输出终端
+
+![image-20220723211954922](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232119961.png)
+
+原本的默认串口为uart7,这里我们修改为uart1,同时这里控制台设备也修改为uart1
+
+![image-20220723223206646](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232232947.png)
+
+打开FSP，创建一个uart stack，并完成以下配置
+
+![image-20220723223556733](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232235800.png)
+
+![image-20220723223741003](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232237062.png)
+
+生成配置
+
+![image-20220723223812318](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232238389.png)
+
+然后回到studio，保存编译下载，此时更换串口接线：`TX->P708,RT->P709(对应上面PIN配置的引脚)`，reset查看串口，至此，rt_kprintf的输出终端切换完成。
+
+![image-20220723224002456](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207232240505.png)
