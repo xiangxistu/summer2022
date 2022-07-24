@@ -1,6 +1,6 @@
 # RTT 夏令营第六天总结 
 
-## RT-Thread 的网络框架结构
+## RT-Thread 的网络框架结构 
 
 ![网络框架](.\assets\image-20220723202409729.png)
 
