@@ -182,6 +182,26 @@ cmd参数说明如下：
 
 ![image-20220721214059035](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207212140116.png)
 
+AHT10初始化函数：
+
+```c
+#include "sensor_asair_aht10.h"
+#define AHT10_I2C_BUS  "i2c1"
+
+int rt_hw_aht10_port(void)
+{
+    struct rt_sensor_config cfg;
+
+    cfg.intf.dev_name  = AHT10_I2C_BUS;
+    cfg.intf.user_data = (void *)AHT10_I2C_ADDR;
+
+    rt_hw_aht10_init("aht10", &cfg);
+
+    return RT_EOK;
+}
+INIT_ENV_EXPORT(rt_hw_aht10_port);
+```
+
 用户代码编写：
 
 ```c
@@ -194,32 +214,29 @@ static rt_thread_t aht10_thread = RT_NULL;
 static void aht10_thread_entry(void *parameter)
 {
     float humidity, temperature;
-    while (1)
+
+    int i = 0;
+    for(i;i<5;i++)
     {
+        rt_kprintf("*********************Testing number is %d**********************\n\n",i+1);
         /* read humidity 采集湿度 */
         humidity = aht10_read_humidity(temp_humi_dev);
         rt_kprintf("humidity   : %d.%d %%\n", (int)humidity, (int)(humidity * 10) % 10); /* former is integer and behind is decimal */
 
         /* read temperature 采集温度 */
         temperature = aht10_read_temperature(temp_humi_dev);
-        rt_kprintf("temperature: %d.%d \n", (int)temperature, (int)(temperature * 10) % 10); /* former is integer and behind is decimal */
+        rt_kprintf("temperature: %d.%d \n\n", (int)temperature, (int)(temperature * 10) % 10); /* former is integer and behind is decimal */
 
         rt_thread_mdelay(1000);
     }
 
 }
 
-
 static int app_aht10_init(void)
 {
     rt_err_t rt_err;
     /* 创建温湿度采集线程*/
-    aht10_thread = rt_thread_create("aht10 thread",     /* 线程的名称 */
-                                    aht10_thread_entry, /* 线程入口函数 */
-                                    RT_NULL,            /* 线程入口函数的参数   */
-                                    1024,                /* 线程栈大小，单位是字节  */
-                                    25,                 /* 线程的优先级，数值越小优先级越高*/
-                                    10);                /* 线程的时间片大小 */
+    aht10_thread = rt_thread_create("aht10 thread",aht10_thread_entry,RT_NULL,1024,25,10);
     /* 如果获得线程控制块，启动这个线程 */
     if (aht10_thread != RT_NULL)
         rt_err = rt_thread_startup(aht10_thread);
@@ -233,9 +250,10 @@ static int app_aht10_init(void)
     return RT_EOK;
 }
 
-INIT_APP_EXPORT(app_aht10_init);
+//INIT_APP_EXPORT(app_aht10_init);
+MSH_CMD_EXPORT(app_aht10_init,app_aht10_init);
 ```
 
 这里查看串口显示
 
-![image-20220721214258377](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207212142432.png)
+![image-20220722092957169](https://raw.githubusercontent.com/kurisaW/picbed/main/img/202207220929396.png)
