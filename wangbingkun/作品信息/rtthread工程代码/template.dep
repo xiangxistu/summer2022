@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <fileVersion>4</fileVersion>
+    <fileChecksum>3311205052</fileChecksum>
+    <configuration>
+        <name>Release</name>
+        <outputs />
+    </configuration>
+    <configuration>
+        <name>rt-thread</name>
+        <outputs />
+    </configuration>
+</project>
