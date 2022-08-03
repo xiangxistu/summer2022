@@ -10,6 +10,7 @@
 - LCD:用来观察本地信息
 - AHT10:代替测试液体温度（暂时没有可以防水的温度传感器）
 - SR04:用来检测液位（后期如果换成光学液位传感器使用年限会更久更稳定）
+![](./picture/DSC03042.png)
 
 ## 软件说明
 - 移植了0.96寸LCD显示屏
@@ -25,7 +26,16 @@
     - 事件
 
 ## 示例视频
-- 1.mp4
-- 2.mp4
+
+<https://www.bilibili.com/video/BV1RW4y1y7wA>
+<video src="https://www.bilibili.com/video/BV1RW4y1y7wA"></video>
+
+
+## 仓库地址
+<https://github.com/xhhhm/Intelligent-water-pump.git>
+
+
+
+
 
 
